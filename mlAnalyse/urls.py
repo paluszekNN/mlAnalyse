@@ -15,11 +15,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from .views import home_view
+from .views import data_upload
 
 urlpatterns = [
     path('linear_regression/', include('linear_regression.urls')),
     path('admin/', admin.site.urls),
-    path('', home_view, name='home'),
-
+    path('', data_upload, name='home'),
 ]
