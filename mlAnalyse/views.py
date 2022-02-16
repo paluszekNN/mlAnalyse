@@ -20,10 +20,9 @@ def data_upload(request):
         messages.error(request, 'This is not a csv file')
 
     try:
-        data = pd.read_csv(csv_file)
+        data = pd.read_csv(csv_file, sep=':')
     except:
         messages.error(request, 'This file can\'t export as data')
-
     Data.objects.all().delete()
     new_data = Data(name=csv_file, data=data.to_json())
     new_data.save()
