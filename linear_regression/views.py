@@ -17,7 +17,6 @@ class IndexView(generic.ListView):
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
         df = pd.DataFrame(json.loads(Data.objects.all()[0].data))
-        print(df.head(1))
         df.dropna(inplace=True)
 
         context['features'] = df.columns

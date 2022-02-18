@@ -1,18 +1,25 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+<nav class="navbar fixed-top navbar-expand-sm navbar-light" style="background-color: #ccccff;">
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav">
             <li class="nav-item">
-                <a class="nav-link" href="http://localhost:8000/">Home <span class="sr-only">(current)</span></a>
+                <a class="nav-link" href="http://localhost:8000/">Home</a>
+            </li>
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">ML</a>
+                <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                    <li><a class="dropdown-item" href="http://localhost:8000/linear_regression">Data</a></li>
+                    <li><a class="dropdown-item" href="http://localhost:8000/linear_regression\lr">Linear Regression</a></li>
+                    <li><a class="dropdown-item" href="http://localhost:8000/linear_regression\eln">Elastic Net</a></li>
+                </ul>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="http://localhost:8000/linear_regression">ML<span class="sr-only">(current)</span></a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="http://localhost:8000/linear_regression/analyse">Analysis<span class="sr-only">(current)</span></a>
+                <a class="nav-link" href="http://localhost:8000/linear_regression/analyse">Analysis</a>
             </li>
         </ul>
     </div>
 </nav>
+<br>
+<br>

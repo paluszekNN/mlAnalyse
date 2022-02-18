@@ -1,0 +1,26 @@
+{% extends 'index.html' %}
+
+{% block content %}
+
+<h1>Data</h1>
+<table class="table table-sortable">
+    <thead class="thead-light">
+        <tr>
+            {% for feature in features %}
+            <th>{{feature}}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+    {% for row in data %}
+    <tr>
+        {% for feature, value in row.items %}
+            <td>{{value}}</td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
+
