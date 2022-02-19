@@ -1,0 +1,32 @@
+{% extends 'index.html' %}
+
+{% block content %}
+
+<h1>Linear Models</h1>
+<table class="table table-sortable">
+    <thead class="thead-light">
+        <tr>
+            <th>name</th>
+            <th>score</th>
+            <th>bias</th>
+            {% for feature in features %}
+            <th>{{feature}}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+
+    {% for name, score, bias, coef in data_0 %}
+    <tr>
+        <td>{{name}}</td>
+        <td>{{score}}</td>
+        <td>{{bias}}</td>
+        {% for value in coef %}
+            <td>{{value}}</td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

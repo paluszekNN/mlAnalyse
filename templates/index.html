@@ -29,7 +29,7 @@
             {% csrf_token %}
             <label>Upload a file</label>
             <input type="file" name="file">
-            <p>Only accepts CSV files</p>
+            <p>Only accepts CSV files and label is last column</p>
             <button class="btn btn-primary" type="submit">Upload</button>
         </form>
     {% endif %}
