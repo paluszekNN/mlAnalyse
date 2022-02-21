@@ -6,6 +6,7 @@ from django.views import generic
 from .models import Data
 import pandas as pd
 from sklearn.linear_model import LinearRegression, ElasticNet, Ridge, SGDRegressor, Lars, Lasso
+from sklearn.tree import ExtraTreeRegressor, DecisionTreeRegressor
 from sklearn.model_selection import KFold
 from sklearn.metrics import r2_score
 import numpy as np
@@ -74,10 +75,55 @@ class LRView(generic.ListView):
             coefs.append(np.round(model.coef_, decimals=4))
             biases.append(float(model.intercept_))
             model_names.append(str(model))
-        p = coefs[0].argsort()[::-1]
+        p = coefs[np.argmax(models_mean_score)].argsort()[::-1]
         for i in range(coefs.__len__()):
             coefs[i] = coefs[i][p]
         data = zip(model_names, np.round(models_mean_score, decimals=4), np.round(biases, decimals=4), coefs)
+
+        context['data_0'] = data
+        context['features'] = np.array(df.columns[:-1])[p]
+        return context
+
+
+class TSMView(generic.ListView):
+    template_name = 'tsm.html'
+    context_object_name = 'data'
+
+    def get_queryset(self):
+        return Data.objects.all()
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        df = pd.DataFrame(json.loads(Data.objects.all()[0].data))
+        df.dropna(inplace=True)
+        for col in df.columns:
+            try:
+                df[col].astype(float)
+            except:
+                df.drop(col, axis=1, inplace=True)
+        ex = ExtraTreeRegressor()
+        dtr = DecisionTreeRegressor()
+
+        models = [ex, dtr]
+        data_X = df.drop(df.columns[-1], axis=1)
+        data_y = df[df.columns[-1]]
+        kf = KFold(n_splits=5, random_state=None, shuffle=False)
+        kf.get_n_splits(data_X)
+        models_mean_score = []
+        coefs = []
+        model_names = []
+        for model in models:
+            scores = []
+            for train, test in kf.split(data_X):
+                model.fit(data_X.iloc[train], data_y.iloc[train])
+                scores.append(r2_score(model.predict(data_X.iloc[test]), data_y.iloc[test]))
+            models_mean_score.append(np.mean(scores))
+            coefs.append(np.round(model.feature_importances_, decimals=4))
+            model_names.append(str(model))
+        p = coefs[np.argmax(models_mean_score)].argsort()[::-1]
+        for i in range(coefs.__len__()):
+            coefs[i] = coefs[i][p]
+        data = zip(model_names, np.round(models_mean_score, decimals=4), coefs)
 
         context['data_0'] = data
         context['features'] = np.array(df.columns[:-1])[p]

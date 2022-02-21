@@ -9,6 +9,7 @@
     {% load static %}
 
     <link rel="stylesheet" href="{% static 'tablesort.css' %}">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
 </head>
 <body>
 
@@ -27,9 +28,13 @@
         {{order}}
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
+            <label>Separator:</label>
+            <input type="text" name="sep">
+            <label>Label:</label>
+            <input type="text" name="label">
             <label>Upload a file</label>
             <input type="file" name="file">
-            <p>Only accepts CSV files and label is last column</p>
+            <p>Only accepts CSV files</p>
             <button class="btn btn-primary" type="submit">Upload</button>
         </form>
     {% endif %}

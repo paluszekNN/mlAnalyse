@@ -15,17 +15,25 @@ def data_upload(request):
         return render(request, template, prompt)
 
     csv_file = request.FILES['file']
+    sep = request.POST["sep"]
+    label = request.POST["label"]
 
     if not csv_file.name.endswith('.csv'):
         messages.error(request, 'This is not a csv file')
 
     try:
-        data = pd.read_csv(csv_file, sep=':')
+        data = pd.read_csv(csv_file, sep=sep)
+
+        ar = data[label]
+        data.drop(label, axis=1, inplace=True)
+        data[label] = ar
+
+        Data.objects.all().delete()
+        new_data = Data(name=csv_file, data=data.to_json())
+        new_data.save()
     except:
         messages.error(request, 'This file can\'t export as data')
-    Data.objects.all().delete()
-    new_data = Data(name=csv_file, data=data.to_json())
-    new_data.save()
+
 
     context = {}
     return render(request, template, context)
