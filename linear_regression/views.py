@@ -22,7 +22,8 @@ class DataView(generic.ListView):
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
         df = pd.DataFrame(json.loads(Data.objects.all()[0].data))
-        df.dropna(inplace=True)
+
+        df.dropna(inplace=True, axis=1)
 
         context['features'] = df.columns
         json_records = df.reset_index(drop=True).to_json(orient='records')
@@ -41,26 +42,27 @@ class LRView(generic.ListView):
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
         df = pd.DataFrame(json.loads(Data.objects.all()[0].data))
-        df.dropna(inplace=True)
+        df.dropna(inplace=True, axis=1)
         for col in df.columns:
             try:
-                df[col].astype(float)
+                df[col] = df[col].astype(float)
             except:
                 df.drop(col, axis=1, inplace=True)
-        lr = LinearRegression()
-        el1 = ElasticNet(1)
-        el05 = ElasticNet(0.5)
-        el025 = ElasticNet(0.25)
-        el01 = ElasticNet(0.1)
-        lasso = Lasso()
-        ridge = Ridge()
-        sgd = SGDRegressor()
-        lars = Lars()
+        lr = LinearRegression
+        el1 = ElasticNet
+        el05 = ElasticNet
+        el025 = ElasticNet
+        el01 = ElasticNet
+        lasso = Lasso
+        ridge = Ridge
+        sgd = SGDRegressor
+        lars = Lars
+        list_of_elasticnet_alpha = [1, 0.5, 0.25, 0.1]
 
         models = [lr, el1, el05, el025, el01, lasso, ridge, sgd, lars]
         data_X = df.drop(df.columns[-1], axis=1)
         data_y = df[df.columns[-1]]
-        kf = KFold(n_splits=5, random_state=None, shuffle=False)
+        kf = KFold(n_splits=5, random_state=None, shuffle=True)
         kf.get_n_splits(data_X)
         models_mean_score = []
         coefs = []
@@ -68,13 +70,24 @@ class LRView(generic.ListView):
         model_names = []
         for model in models:
             scores = []
+            if model == ElasticNet:
+                alpha = list_of_elasticnet_alpha.pop()
             for train, test in kf.split(data_X):
-                model.fit(data_X.iloc[train], data_y.iloc[train])
-                scores.append(r2_score(model.predict(data_X.iloc[test]), data_y.iloc[test]))
+                if model == ElasticNet:
+                    model_to_fit = model(alpha)
+                else:
+                    model_to_fit = model()
+                model_to_fit.fit(data_X.iloc[train], data_y.iloc[train])
+                scores.append(r2_score(model_to_fit.predict(data_X.iloc[test]), data_y.iloc[test]))
             models_mean_score.append(np.mean(scores))
-            coefs.append(np.round(model.coef_, decimals=4))
-            biases.append(float(model.intercept_))
-            model_names.append(str(model))
+            if model == ElasticNet:
+                model_to_fit = model(alpha)
+            else:
+                model_to_fit = model()
+            model_to_fit.fit(data_X, data_y)
+            biases.append(float(model_to_fit.intercept_))
+            coefs.append(np.round(model_to_fit.coef_, decimals=4))
+            model_names.append(str(model_to_fit))
         p = coefs[np.argmax(models_mean_score)].argsort()[::-1]
         for i in range(coefs.__len__()):
             coefs[i] = coefs[i][p]
@@ -95,19 +108,19 @@ class TSMView(generic.ListView):
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
         df = pd.DataFrame(json.loads(Data.objects.all()[0].data))
-        df.dropna(inplace=True)
+        df.dropna(inplace=True, axis=1)
         for col in df.columns:
             try:
-                df[col].astype(float)
+                df[col] = df[col].astype(float)
             except:
                 df.drop(col, axis=1, inplace=True)
-        ex = ExtraTreeRegressor()
-        dtr = DecisionTreeRegressor()
+        ex = ExtraTreeRegressor
+        dtr = DecisionTreeRegressor
 
         models = [ex, dtr]
         data_X = df.drop(df.columns[-1], axis=1)
         data_y = df[df.columns[-1]]
-        kf = KFold(n_splits=5, random_state=None, shuffle=False)
+        kf = KFold(n_splits=5, random_state=None, shuffle=True)
         kf.get_n_splits(data_X)
         models_mean_score = []
         coefs = []
@@ -115,11 +128,14 @@ class TSMView(generic.ListView):
         for model in models:
             scores = []
             for train, test in kf.split(data_X):
-                model.fit(data_X.iloc[train], data_y.iloc[train])
-                scores.append(r2_score(model.predict(data_X.iloc[test]), data_y.iloc[test]))
+                model_to_fit = model()
+                model_to_fit.fit(data_X.iloc[train], data_y.iloc[train])
+                scores.append(r2_score(model_to_fit.predict(data_X.iloc[test]), data_y.iloc[test]))
             models_mean_score.append(np.mean(scores))
-            coefs.append(np.round(model.feature_importances_, decimals=4))
-            model_names.append(str(model))
+            model_to_fit = model()
+            model_to_fit.fit(data_X, data_y)
+            coefs.append(np.round(model_to_fit.feature_importances_, decimals=4))
+            model_names.append(str(model_to_fit))
         p = coefs[np.argmax(models_mean_score)].argsort()[::-1]
         for i in range(coefs.__len__()):
             coefs[i] = coefs[i][p]
