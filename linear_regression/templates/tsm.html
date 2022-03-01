@@ -15,11 +15,11 @@
     </thead>
     <tbody>
 
-    {% for name, score, coef in data_0 %}
+    {% for name, feature_importances, score in attributes %}
     <tr>
         <td>{{name}}</td>
         <td>{{score}}</td>
-        {% for value in coef %}
+        {% for value in feature_importances %}
             <td>{{value}}</td>
         {% endfor %}
     </tr>
