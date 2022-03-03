@@ -1,9 +1,8 @@
 import json
-
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.views import generic
-from .models import Data
+from .models import Data, Analyse
 import pandas as pd
 from sklearn.linear_model import LinearRegression, ElasticNet, Ridge, SGDRegressor, Lars, Lasso
 from sklearn.tree import ExtraTreeRegressor, DecisionTreeRegressor
@@ -172,3 +171,38 @@ class TSMView(generic.ListView):
         context['attributes'] = zip(*attributes)
         context['features'] = np.array(ml.data.columns[:-1])[sorted_indexes_by_score]
         return context
+
+
+class AnalyseView(generic.ListView):
+    template_name = 'summarization.html'
+    context_object_name = 'data'
+
+    def get_queryset(self):
+        return Data.objects.all()
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        ml = MLModels(LinearModels())
+        list_of_elasticnet_alpha, linear_models = ml.type_of_modeling.get_models()
+        ml.type_of_modeling = TreeModels()
+        _, tree_models = ml.type_of_modeling.get_models()
+        context['models'] = sorted(list(set(linear_models))+tree_models, key=lambda x:str(x))
+        context['list_of_elasticnet_alpha'] = list_of_elasticnet_alpha
+
+        # context['features'] = df.columns
+        return context
+
+
+def save_model_to_compare(request):
+    template = 'summarization.html'
+
+    model = request.POST["model"]
+    alpha = request.POST["alpha"]
+    model2 = request.POST["model2"]
+    alpha2 = request.POST["alpha2"]
+    print(alpha2)
+    Analyse.objects.all().delete()
+    new_analyse = Analyse(name=model, alpha=alpha, name2=model2, alpha2=alpha2)
+    new_analyse.save()
+
+    return redirect('summarization')

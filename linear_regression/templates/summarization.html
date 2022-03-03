@@ -1,0 +1,58 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<h1>Summarization</h1>
+<form method="POST" action="save_analyse" enctype="multipart/form-data">
+    {% csrf_token %}
+    model:
+    <select id="model" name="model">
+        {% for model in models %}
+        <option value="{{model}}">{{model}}</option>
+        {% endfor %}
+    </select>
+    <select id="alpha" name="alpha">
+        {% for alpha in list_of_elasticnet_alpha %}
+        <option value="{{alpha}}">{{alpha}}</option>
+        {% endfor %}
+    </select>
+    <br>
+    model2:
+    <select id="model2" name="model2">
+        {% for model in models %}
+        <option value="{{model}}">{{model}}</option>
+        {% endfor %}
+    </select>
+    <select id="alpha2" name="alpha2">
+        {% for alpha in list_of_elasticnet_alpha %}
+        <option value="{{alpha}}">{{alpha}}</option>
+        {% endfor %}
+    </select>
+    <br>
+    <button type="submit" class="btn btn-success">Save</button>
+</form>
+{{analyse}}
+<!--<table class="table table-sortable">-->
+<!--    <thead class="thead-light">-->
+<!--        <tr>-->
+<!--            <th>name</th>-->
+<!--            <th>score</th>-->
+<!--            {% for feature in features %}-->
+<!--            <th>{{feature}}</th>-->
+<!--            {% endfor %}-->
+<!--        </tr>-->
+<!--    </thead>-->
+<!--    <tbody>-->
+
+<!--    {% for name, feature_importances, score in attributes %}-->
+<!--    <tr>-->
+<!--        <td>{{name}}</td>-->
+<!--        <td>{{score}}</td>-->
+<!--        {% for value in feature_importances %}-->
+<!--            <td>{{value}}</td>-->
+<!--        {% endfor %}-->
+<!--    </tr>-->
+<!--    {% endfor %}-->
+<!--    </tbody>-->
+<!--</table>-->
+
+{% endblock %}
