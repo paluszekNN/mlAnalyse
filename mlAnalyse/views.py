@@ -1,7 +1,13 @@
 from django.shortcuts import render
 from django.contrib import messages
 import pandas as pd
-from linear_regression.models import Data
+from linear_regression.models import Data, Analyse
+
+
+def set_label_as_last_column(label, data: pd.DataFrame):
+    data_y = data[label]
+    data.drop(label, axis=1, inplace=True)
+    data[label] = data_y
 
 
 def data_upload(request):
@@ -24,11 +30,11 @@ def data_upload(request):
     try:
         data = pd.read_csv(csv_file, sep=sep)
 
-        ar = data[label]
-        data.drop(label, axis=1, inplace=True)
-        data[label] = ar
+        set_label_as_last_column(label, data)
+        print(data)
 
         Data.objects.all().delete()
+        Analyse.objects.all().delete()
         new_data = Data(name=csv_file, data=data.to_json())
         new_data.save()
     except:

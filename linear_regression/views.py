@@ -7,26 +7,26 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression, ElasticNet, Ridge, SGDRegressor, Lars, Lasso
 from sklearn.tree import ExtraTreeRegressor, DecisionTreeRegressor
 from sklearn.model_selection import KFold
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
 import numpy as np
 
 
 class DataView(generic.ListView):
     template_name = 'data.html'
-    context_object_name = 'data'
 
     def get_queryset(self):
-        return Data.objects.all()
+        return None
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
         df = pd.DataFrame(json.loads(Data.objects.all()[0].data))
 
         df.dropna(inplace=True, axis=1)
-
-        context['features'] = df.columns
         json_records = df.reset_index(drop=True).to_json(orient='records')
         data = json.loads(json_records)
+
+        context['features'] = df.columns
         context['data'] = data
         return context
 
@@ -80,7 +80,12 @@ class MLModels:
                 df[col] = df[col].astype(float)
             except:
                 df.drop(col, axis=1, inplace=True)
-        self.data = df
+        scaler = StandardScaler()
+        df[df.columns[:-1]] = scaler.fit_transform(df[df.columns[:-1]])
+        self.data_X = df.drop(df.columns[-1], axis=1)
+        self.data_y = df[df.columns[-1]]
+        self.kf = KFold(n_splits=5, random_state=None, shuffle=True)
+        self.kf.get_n_splits(self.data_X)
 
     @property
     def type_of_modeling(self) -> TypeOfModeling:
@@ -90,57 +95,67 @@ class MLModels:
     def type_of_modeling(self, type_of_modeling: TypeOfModeling) -> None:
         self._type_of_modeling = type_of_modeling
 
-    def get_attributes(self):
-        data_X = self.data.drop(self.data.columns[-1], axis=1)
-        data_y = self.data[self.data.columns[-1]]
-        kf = KFold(n_splits=5, random_state=None, shuffle=True)
-        kf.get_n_splits(data_X)
+    def get_scores_from_kfold_split(self, model, el_alpha):
+        scores = []
+        for train, test in self.kf.split(self.data_X):
+            if model == ElasticNet:
+                model_to_fit = model(el_alpha)
+            else:
+                model_to_fit = model()
+            model_to_fit.fit(self.data_X.iloc[train], self.data_y.iloc[train])
+            scores.append(r2_score(model_to_fit.predict(self.data_X.iloc[test]), self.data_y.iloc[test]))
+        return scores
 
-        attributes = {}
+    def collect_attributes(self):
         model_names = []
         models_mean_score = []
 
         list_of_elastic_net_alpha, models = self._type_of_modeling.get_models()
+        features_importances = []
+        intercepts = []
+
         for model in models:
-            scores = []
             el_alpha = None
             if model == ElasticNet:
                 el_alpha = list_of_elastic_net_alpha.pop()
-            for train, test in kf.split(data_X):
-                if model == ElasticNet:
-                    model_to_fit = model(el_alpha)
-                else:
-                    model_to_fit = model()
-                model_to_fit.fit(data_X.iloc[train], data_y.iloc[train])
-                scores.append(r2_score(model_to_fit.predict(data_X.iloc[test]), data_y.iloc[test]))
+            scores = self.get_scores_from_kfold_split(model, el_alpha)
             models_mean_score.append(np.round(np.mean(scores), decimals=4))
             if model == ElasticNet:
                 model_to_fit = model(el_alpha)
             else:
                 model_to_fit = model()
-            model_to_fit.fit(data_X, data_y)
-            i = 0
-            for att in self._type_of_modeling.get_attributes(model_to_fit):
-                if str(i) not in attributes.keys():
-                    attributes[str(i)] = []
-                attributes[str(i)].append(np.round(att, decimals=4))
-                i += 1
+            model_to_fit.fit(self.data_X, self.data_y)
+            attributes = self._type_of_modeling.get_attributes(model_to_fit)
+            features_importances.append(np.round(attributes[0], decimals=4))
+            if self._type_of_modeling.__class__ == LinearModels:
+                intercepts.append(np.round(attributes[1], decimals=4))
             model_names.append(str(model_to_fit))
-        assert isinstance(attributes['0'][0], np.ndarray)
-        sorted_indexes_by_score = attributes['0'][np.argmax(models_mean_score)].argsort()[::-1]
+        if intercepts:
+            attributes = (features_importances, intercepts)
+        else:
+            attributes = (features_importances,)
+        return attributes, models_mean_score, model_names
 
-        for i in range(attributes['0'].__len__()):
-            attributes['0'][i] = attributes['0'][i][sorted_indexes_by_score]
+    def sort_features_importances_values(self, attributes, sorted_indexes_by_score):
+        for i in range(attributes[0].__len__()):
+            attributes[0][i] = attributes[0][i][sorted_indexes_by_score]
 
-        return (model_names, *attributes.values(), models_mean_score), sorted_indexes_by_score
+    def get_attributes(self):
+        attributes, models_mean_score, model_names = self.collect_attributes()
+
+        assert isinstance(attributes[0][0], np.ndarray)
+        sorted_indexes_by_score = attributes[0][np.argmax(models_mean_score)].argsort()[::-1]
+
+        self.sort_features_importances_values(attributes, sorted_indexes_by_score)
+
+        return (model_names, *attributes, models_mean_score), sorted_indexes_by_score
 
 
 class LRView(generic.ListView):
     template_name = 'lr.html'
-    context_object_name = 'data'
 
     def get_queryset(self):
-        return Data.objects.all()
+        return None
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -152,7 +167,7 @@ class LRView(generic.ListView):
             assert isinstance(att, list)
 
         context['attributes'] = zip(*attributes)
-        context['features'] = np.array(ml.data.columns[:-1])[sorted_indexes_by_score]
+        context['features'] = np.array(ml.data_X.columns)[sorted_indexes_by_score]
         return context
 
 
@@ -169,16 +184,15 @@ class TSMView(generic.ListView):
         ml = MLModels(TreeModels())
         attributes, sorted_indexes_by_score = ml.get_attributes()
         context['attributes'] = zip(*attributes)
-        context['features'] = np.array(ml.data.columns[:-1])[sorted_indexes_by_score]
+        context['features'] = np.array(ml.data_X.columns)[sorted_indexes_by_score]
         return context
 
 
 class AnalyseView(generic.ListView):
     template_name = 'summarization.html'
-    context_object_name = 'data'
 
     def get_queryset(self):
-        return Data.objects.all()
+        return None
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -186,10 +200,35 @@ class AnalyseView(generic.ListView):
         list_of_elasticnet_alpha, linear_models = ml.type_of_modeling.get_models()
         ml.type_of_modeling = TreeModels()
         _, tree_models = ml.type_of_modeling.get_models()
-        context['models'] = sorted(list(set(linear_models))+tree_models, key=lambda x:str(x))
+        models = list(set(linear_models))+tree_models
+        context['models'] = sorted(models, key=lambda x:str(x))
         context['list_of_elasticnet_alpha'] = list_of_elasticnet_alpha
 
-        # context['features'] = df.columns
+        if Analyse.objects.all():
+            analyse = Analyse.objects.all()[0]
+            models_to_sum = {}
+            for model in models:
+                if str(model()) == analyse.name:
+                    models_to_sum['first_model'] = {'object': model()}
+                    models_to_sum['first_model']['object'].fit(ml.data_X, ml.data_y)
+
+                elif str(model()) == analyse.name2:
+                    models_to_sum['second_model'] = {'object': model()}
+                    models_to_sum['second_model']['object'].fit(ml.data_X, ml.data_y)
+
+            for model in models_to_sum.keys():
+                if 'tree' in str(models_to_sum[model]['object']).lower():
+                    feature_scores = models_to_sum[model]['object'].feature_importances_
+                else:
+                    feature_scores = models_to_sum[model]['object'].coef_
+                sorted_indexes_by_score = np.abs(feature_scores).argsort()[::-1]
+                sorted_features = ml.data_X.columns[sorted_indexes_by_score]
+                context[model+'_best_features'] = ', '.join(list(sorted_features)[:(len(ml.data_X.columns))//5+1])
+                worst_features = list(sorted_features)[-(len(ml.data_X.columns))//5:]
+                worst_features.reverse()
+                context[model+'_worst_features'] = ', '.join(worst_features)
+                context[model] = str(models_to_sum[model]['object']).split('(')[0]
+            context['features'] = ml.data_X.columns
         return context
 
 
@@ -200,7 +239,7 @@ def save_model_to_compare(request):
     alpha = request.POST["alpha"]
     model2 = request.POST["model2"]
     alpha2 = request.POST["alpha2"]
-    print(alpha2)
+
     Analyse.objects.all().delete()
     new_analyse = Analyse(name=model, alpha=alpha, name2=model2, alpha2=alpha2)
     new_analyse.save()

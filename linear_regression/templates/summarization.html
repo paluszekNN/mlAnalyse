@@ -30,7 +30,23 @@
     <br>
     <button type="submit" class="btn btn-success">Save</button>
 </form>
-{{analyse}}
+{% if first_model %}
+{{first_model}} the most important features:
+<br>
+{{first_model_best_features}}
+<br>
+{{first_model}} the least important features:
+<br>
+{{first_model_worst_features}}
+<br>
+{{second_model}} the most important features:
+<br>
+{{second_model_best_features}}
+<br>
+{{second_model}} the least important features:
+<br>
+{{second_model_worst_features}}
+{% endif %}
 <!--<table class="table table-sortable">-->
 <!--    <thead class="thead-light">-->
 <!--        <tr>-->
