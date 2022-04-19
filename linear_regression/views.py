@@ -21,7 +21,6 @@ class DataView(generic.ListView):
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
         df = pd.DataFrame(json.loads(Data.objects.all()[0].data))
-
         df.dropna(inplace=True, axis=1)
         json_records = df.reset_index(drop=True).to_json(orient='records')
         data = json.loads(json_records)
@@ -95,16 +94,15 @@ class MLModels:
     def type_of_modeling(self, type_of_modeling: TypeOfModeling) -> None:
         self._type_of_modeling = type_of_modeling
 
-    def get_scores_from_kfold_split(self, model, el_alpha):
-        scores = []
-        for train, test in self.kf.split(self.data_X):
-            if model == ElasticNet:
-                model_to_fit = model(el_alpha)
-            else:
-                model_to_fit = model()
-            model_to_fit.fit(self.data_X.iloc[train], self.data_y.iloc[train])
-            scores.append(r2_score(model_to_fit.predict(self.data_X.iloc[test]), self.data_y.iloc[test]))
-        return scores
+    def get_attributes(self):
+        attributes, models_mean_score, model_names = self.collect_attributes()
+
+        assert isinstance(attributes[0][0], np.ndarray)
+        sorted_indexes_by_score = attributes[0][np.argmax(models_mean_score)].argsort()[::-1]
+
+        self.sort_features_importances_values(attributes, sorted_indexes_by_score)
+
+        return (model_names, *attributes, models_mean_score), sorted_indexes_by_score
 
     def collect_attributes(self):
         model_names = []
@@ -136,19 +134,20 @@ class MLModels:
             attributes = (features_importances,)
         return attributes, models_mean_score, model_names
 
+    def get_scores_from_kfold_split(self, model, el_alpha):
+        scores = []
+        for train, test in self.kf.split(self.data_X):
+            if model == ElasticNet:
+                model_to_fit = model(el_alpha)
+            else:
+                model_to_fit = model()
+            model_to_fit.fit(self.data_X.iloc[train], self.data_y.iloc[train])
+            scores.append(r2_score(model_to_fit.predict(self.data_X.iloc[test]), self.data_y.iloc[test]))
+        return scores
+
     def sort_features_importances_values(self, attributes, sorted_indexes_by_score):
         for i in range(attributes[0].__len__()):
             attributes[0][i] = attributes[0][i][sorted_indexes_by_score]
-
-    def get_attributes(self):
-        attributes, models_mean_score, model_names = self.collect_attributes()
-
-        assert isinstance(attributes[0][0], np.ndarray)
-        sorted_indexes_by_score = attributes[0][np.argmax(models_mean_score)].argsort()[::-1]
-
-        self.sort_features_importances_values(attributes, sorted_indexes_by_score)
-
-        return (model_names, *attributes, models_mean_score), sorted_indexes_by_score
 
 
 class LRView(generic.ListView):

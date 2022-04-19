@@ -4,12 +4,6 @@ import pandas as pd
 from linear_regression.models import Data, Analyse
 
 
-def set_label_as_last_column(label, data: pd.DataFrame):
-    data_y = data[label]
-    data.drop(label, axis=1, inplace=True)
-    data[label] = data_y
-
-
 def data_upload(request):
     template = 'index.html'
 
@@ -31,7 +25,7 @@ def data_upload(request):
         data = pd.read_csv(csv_file, sep=sep)
 
         set_label_as_last_column(label, data)
-        print(data)
+        data.dropna(inplace=True, axis=0)
 
         Data.objects.all().delete()
         Analyse.objects.all().delete()
@@ -43,3 +37,9 @@ def data_upload(request):
 
     context = {}
     return render(request, template, context)
+
+
+def set_label_as_last_column(label, data: pd.DataFrame):
+    data_y = data[label]
+    data.drop(label, axis=1, inplace=True)
+    data[label] = data_y

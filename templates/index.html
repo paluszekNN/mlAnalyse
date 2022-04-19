@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xml:lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -31,14 +31,22 @@
             {% csrf_token %}
             <label>Separator:</label>
             <input type="text" name="sep">
+            <br>
             <label>Label:</label>
             <input type="text" name="label">
-            <label>Upload a file</label>
-            <input type="file" name="file">
-            <p>Only accepts CSV files</p>
+            <br>
+            <div>
+                <label class="btn-warning" for="file_upload">Choose file to upload (CSV)</label>
+                <input id="file_upload" type="file" name="file" accept=".csv" style="opacity:0;">
+            </div>
             <button class="btn btn-primary" type="submit">Upload</button>
         </form>
     {% endif %}
+     <ul class="messages">
+      {% for message in messages %}
+      <li>{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+      {% endfor %}
+     </ul>
 
     {% endblock %}
     <script src="{% static 'tablesort.js' %}"></script>
