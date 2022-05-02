@@ -2,7 +2,7 @@ import json
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.views import generic
-from .models import Data, Analyse
+from .models import Data, Analyse, Comparison
 import pandas as pd
 from sklearn.linear_model import LinearRegression, ElasticNet, Ridge, SGDRegressor, Lars, Lasso
 from sklearn.tree import ExtraTreeRegressor, DecisionTreeRegressor
@@ -27,6 +27,50 @@ class DataView(generic.ListView):
 
         context['features'] = df.columns
         context['data'] = data
+        return context
+
+
+class ChartView(generic.ListView):
+    template_name = 'comparison_of_columns.html'
+
+    def get_queryset(self):
+        return None
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        df = pd.DataFrame(json.loads(Data.objects.all()[0].data))
+        df.dropna(inplace=True, axis=1)
+        for col in df.columns:
+            try:
+                df[col] = df[col].astype(float)
+            except:
+                df.drop(col, axis=1, inplace=True)
+        context['columns'] = df.columns
+        df.sort_values(df.columns[-1], inplace=True)
+        dfs = {}
+        min = df.iloc[0][df.columns[-1]]
+        max = df.iloc[-1][df.columns[-1]]
+        if Comparison.objects.all():
+            column = Comparison.objects.all()[0].column
+            column2 = Comparison.objects.all()[0].column2
+        else:
+            column = df.columns[0]
+            column2 = df.columns[1]
+        print(column)
+        for i in range(6):
+            if i<5:
+                dfs[str(i)] = df.loc[(df[df.columns[-1]]>= round(min+(max-min)*i/6,2)) & (df[df.columns[-1]]< round(min+(max-min)*(i+1)/6,2))][[column, column2]].reset_index(drop=True).to_json(orient='records')
+                context['label'+str(i)] = str(df.columns[-1]) + ' (' +str(round(min+(max-min)*i/6,2))+ '-' + str(round(min+(max-min)*(i+1)/6,2)) + ')'
+            else:
+                dfs[str(i)] = df.loc[df[df.columns[-1]] >= round(min + (max - min) * i / 6, 2)][[column, column2]].reset_index(drop=True).to_json(orient='records')
+                context['label'+str(i)] = str(df.columns[-1]) + ' (' +str(round(min+(max-min)*i/6,2))+ '-' + str(max) + ')'
+            dfs[str(i)] = json.loads(dfs[str(i)])
+
+            context['data'+str(i)] = dfs[str(i)]
+
+        context['feature1'] = column
+        context['feature2'] = column2
+
         return context
 
 
@@ -79,6 +123,7 @@ class MLModels:
                 df[col] = df[col].astype(float)
             except:
                 df.drop(col, axis=1, inplace=True)
+
         scaler = StandardScaler()
         df[df.columns[:-1]] = scaler.fit_transform(df[df.columns[:-1]])
         self.data_X = df.drop(df.columns[-1], axis=1)
@@ -199,8 +244,8 @@ class AnalyseView(generic.ListView):
         list_of_elasticnet_alpha, linear_models = ml.type_of_modeling.get_models()
         ml.type_of_modeling = TreeModels()
         _, tree_models = ml.type_of_modeling.get_models()
-        models = list(set(linear_models))+tree_models
-        context['models'] = sorted(models, key=lambda x:str(x))
+        models = list(set(linear_models)) + tree_models
+        context['models'] = sorted(models, key=lambda x: str(x))
         context['list_of_elasticnet_alpha'] = list_of_elasticnet_alpha
 
         if Analyse.objects.all():
@@ -222,10 +267,10 @@ class AnalyseView(generic.ListView):
                     feature_scores = models_to_sum[model]['object'].coef_
                 sorted_indexes_by_score = np.abs(feature_scores).argsort()[::-1]
                 sorted_features = ml.data_X.columns[sorted_indexes_by_score]
-                context[model+'_best_features'] = ', '.join(list(sorted_features)[:(len(ml.data_X.columns))//5+1])
-                worst_features = list(sorted_features)[-(len(ml.data_X.columns))//5:]
+                context[model + '_best_features'] = ', '.join(list(sorted_features)[:(len(ml.data_X.columns)) // 5 + 1])
+                worst_features = list(sorted_features)[-(len(ml.data_X.columns)) // 5:]
                 worst_features.reverse()
-                context[model+'_worst_features'] = ', '.join(worst_features)
+                context[model + '_worst_features'] = ', '.join(worst_features)
                 context[model] = str(models_to_sum[model]['object']).split('(')[0]
             context['features'] = ml.data_X.columns
         return context
@@ -244,3 +289,16 @@ def save_model_to_compare(request):
     new_analyse.save()
 
     return redirect('summarization')
+
+
+def save_columns_to_compare(request):
+    template = 'comparison_of_columns.html'
+
+    column = request.POST["column"]
+    column2 = request.POST["column2"]
+
+    Comparison.objects.all().delete()
+    new_analyse = Comparison(column=column, column2=column2)
+    new_analyse.save()
+
+    return redirect('comparison')

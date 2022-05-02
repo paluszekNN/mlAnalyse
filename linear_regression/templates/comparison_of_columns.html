@@ -1,0 +1,145 @@
+{% extends 'index.html' %}
+
+{% block content %}
+
+<form method="POST" action="save_columns" enctype="multipart/form-data">
+    {% csrf_token %}
+    column:
+    <select id="column" name="column">
+        {% for col in columns %}
+        <option value="{{col}}">{{col}}</option>
+        {% endfor %}
+    </select>
+    <br>
+    column 2:
+    <select id="column2" name="column2">
+        {% for col in columns %}
+        <option value="{{col}}">{{col}}</option>
+        {% endfor %}
+    </select>
+    <br>
+    <button type="submit" class="btn btn-success">Save</button>
+</form>
+
+<canvas id="myChart" width="100" height="40"></canvas>
+<script>
+const ctx = document.getElementById('myChart').getContext('2d');
+const myChart = new Chart(ctx, {
+  type: 'scatter',
+  data: {
+  datasets: [{
+    label: "{{label0}}",
+    data: [
+    {% for row in data0 %}
+        {
+          {% for feature, value in row.items %}
+            {% if feature == feature1 %}
+              x: {{value}},
+            {% else %}
+              y: {{value}}
+            {% endif %}
+          {% endfor %}
+        },
+    {% endfor %}
+    ],
+    backgroundColor: 'rgb(0, 42, 255)'
+  },
+  {
+    label: "{{label1}}",
+    data: [
+    {% for row in data1 %}
+        {
+          {% for feature, value in row.items %}
+            {% if feature == feature1 %}
+              x: {{value}},
+            {% else %}
+              y: {{value}}
+            {% endif %}
+          {% endfor %}
+        },
+    {% endfor %}
+    ],
+    backgroundColor: 'rgb(50, 217, 69)'
+  },
+  {
+    label: "{{label2}}",
+    data: [
+    {% for row in data2 %}
+        {
+          {% for feature, value in row.items %}
+            {% if feature == feature1 %}
+              x: {{value}},
+            {% else %}
+              y: {{value}}
+            {% endif %}
+          {% endfor %}
+        },
+    {% endfor %}
+    ],
+    backgroundColor: 'rgb(236, 242, 48)'
+  },
+  {
+    label: "{{label3}}",
+    data: [
+    {% for row in data3 %}
+        {
+          {% for feature, value in row.items %}
+            {% if feature == feature1 %}
+              x: {{value}},
+            {% else %}
+              y: {{value}}
+            {% endif %}
+          {% endfor %}
+        },
+    {% endfor %}
+    ],
+    backgroundColor: 'rgb(255, 174, 0)'
+  },
+  {
+    label: "{{label4}}",
+    data: [
+    {% for row in data4 %}
+        {
+          {% for feature, value in row.items %}
+            {% if feature == feature1 %}
+              x: {{value}},
+            {% else %}
+              y: {{value}}
+            {% endif %}
+          {% endfor %}
+        },
+    {% endfor %}
+    ],
+    backgroundColor: 'rgb(237, 30, 2)'
+  },
+  {
+    label: "{{label5}}",
+    data: [
+    {% for row in data5 %}
+        {
+          {% for feature, value in row.items %}
+            {% if feature == feature1 %}
+              x: {{value}},
+            {% else %}
+              y: {{value}}
+            {% endif %}
+          {% endfor %}
+        },
+    {% endfor %}
+    ],
+    backgroundColor: 'rgb(0, 0, 0)'
+  }
+  ],
+},
+  options: {
+    scales: {
+      x: {
+        type: 'linear',
+        position: 'bottom'
+      }
+    }
+  }
+});
+</script>
+
+{% endblock %}

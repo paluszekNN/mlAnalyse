@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.contrib import messages
 import pandas as pd
-from linear_regression.models import Data, Analyse
+from linear_regression.models import Data, Analyse, Comparison
 
 
 def data_upload(request):
@@ -26,9 +26,12 @@ def data_upload(request):
 
         set_label_as_last_column(label, data)
         data.dropna(inplace=True, axis=0)
+        if len(data.columns) < 3:
+            raise ImportError("Not enough columns. At least 3")
 
         Data.objects.all().delete()
         Analyse.objects.all().delete()
+        Comparison.objects.all().delete()
         new_data = Data(name=csv_file, data=data.to_json())
         new_data.save()
     except:

@@ -11,3 +11,8 @@ class Analyse(models.Model):
     alpha = models.FloatField()
     name2 = models.CharField(max_length=50)
     alpha2 = models.FloatField()
+
+
+class Comparison(models.Model):
+    column = models.CharField(max_length=50)
+    column2 = models.CharField(max_length=50)
